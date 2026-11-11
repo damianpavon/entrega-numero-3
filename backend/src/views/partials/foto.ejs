@@ -1,0 +1,3 @@
+<%# Imagen de un ítem: /imagenes/cod<restaurante>/<archivo> o imagen comodín. %>
+<% const src = foto ? '/imagenes/cod' + restaurante.id + '/' + encodeURIComponent(foto) : '/img/logo_empresa_comodin.png'; %>
+<img class="<%= clase %>" src="<%= src %>" alt="" <%- ancho ? 'width="' + ancho + '"' : '' %> <%- alto ? 'height="' + alto + '"' : '' %>>

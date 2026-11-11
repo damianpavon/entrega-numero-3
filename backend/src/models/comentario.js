@@ -1,0 +1,20 @@
+'use strict';
+const pool = require('../db/pool');
+
+async function listar(restauranteId) {
+  const { rows } = await pool.query(
+    `SELECT id, usuario, comentario, creado FROM comentarios
+      WHERE restaurantes_id = $1 ORDER BY creado DESC, id DESC LIMIT 100`,
+    [restauranteId]
+  );
+  return rows;
+}
+
+async function crear({ restauranteId, usuarioId, usuario, comentario }) {
+  await pool.query(
+    `INSERT INTO comentarios (restaurantes_id, usuario_id, usuario, comentario) VALUES ($1, $2, $3, $4)`,
+    [restauranteId, usuarioId, usuario, comentario]
+  );
+}
+
+module.exports = { listar, crear };

@@ -1,0 +1,14 @@
+<%- include('partials/head') %>
+<section>
+  <div class="container contendor text-center">
+    <img class="logosintituciones" src="/img/logo.png" width="190" alt="PNK">
+    <h4 class="mt-4">Cartas digitales disponibles</h4>
+    <ul class="list-unstyled mt-3">
+      <% restaurantes.forEach(function (r) { %>
+        <li class="mb-2"><a href="/carta/<%= r.id %>"><%= r.nombre %></a></li>
+      <% }) %>
+      <% if (!restaurantes.length) { %><li>No hay restaurantes registrados.</li><% } %>
+    </ul>
+  </div>
+</section>
+<%- include('partials/footer') %>

@@ -1,0 +1,147 @@
+<%- include('partials/head') %>
+<section>
+  <div class="container contendor">
+    <div class="row">
+      <div class="col-lg-4 text-center"><img class="logosintituciones" src="/img/logo.png" width="190" alt="PNK"></div>
+      <div class="col-lg-4 text-center">
+        <%- include('partials/foto', { foto: restaurante.foto, clase: 'logosintituciones', ancho: 170, alto: null }) %>
+      </div>
+      <div class="col-lg-4">
+        <div class="carro">
+          <div class="media float-right">
+            <a class="button_carrito" href="/carta/<%= restaurante.id %>/carrito">
+              <%- include('partials/icono', { nombre: 'carro', tam: '2em' }) %>
+              Productos Seleccionados (<span id="contador-carrito"><%= cantidadCarrito %></span>)
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-lg-12 text-center">
+        <h4><%= restaurante.nombre %></h4>
+        <h5><%- include('partials/icono', { nombre: 'ubicacion' }) %>
+          <%= restaurante.calle %> #<%= restaurante.numero %>, <%= restaurante.comuna %></h5>
+        <h5>
+          <% if (restaurante.fono) { %><%- include('partials/icono', { nombre: 'telefono' }) %> <%= restaurante.fono %><% } %>
+          <% if (restaurante.email) { %> <%- include('partials/icono', { nombre: 'correo' }) %> <%= restaurante.email %><% } %>
+        </h5>
+      </div>
+    </div>
+  </div>
+</section>
+
+<% if (destacados.length) { %>
+<section class="destacados">
+  <div class="container contendor">
+    <div class="section-intro"><h4 class="intro-title">Menús Destacados</h4></div>
+    <div class="owl-carousel owl-theme featured-carousel">
+      <% destacados.forEach(function (d) { %>
+        <div class="featured-item">
+          <%- include('partials/foto', { foto: d.foto, clase: 'card-img rounded-0', ancho: 350, alto: 235 }) %>
+          <div class="item-body">
+            <h3><%= d.nombre %></h3>
+            <p><%= d.descripcion %><br><%= d.observaciones %><br>
+              <% if (d.tiempo) { %><%- include('partials/icono', { nombre: 'reloj' }) %> <%= d.tiempo %><% } %>
+            </p>
+            <div class="d-flex justify-content-between">
+              <%- include('partials/estrellas', { puntuacion: d.puntuacion }) %>
+              <h3 class="price-tag"><%= monedaChilena(d.precio) %></h3>
+            </div>
+            <a class="button js-agregar" href="#" data-id="<%= d.id %>" style="margin:0%">Seleccionar</a>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+</section>
+<% } %>
+
+<section>
+  <div class="container contendor"><div class="container"><div class="row"><div class="col-lg-12">
+    <nav>
+      <div class="nav nav-tabs nav-fill" id="nav-tab" role="tablist">
+        <% cartas.forEach(function (c, i) { %>
+          <a class="nav-item nav-link <%= i === 0 ? 'active' : '' %>" id="tab-carta-<%= c.id %>" data-toggle="tab"
+             href="#carta-<%= c.id %>" role="tab" aria-controls="carta-<%= c.id %>" aria-selected="<%= i === 0 %>"><%= c.nombre %></a>
+        <% }) %>
+      </div>
+    </nav>
+    <div class="tab-content py-3 px-3 px-sm-0" id="nav-tabContent">
+      <% cartas.forEach(function (c, i) { %>
+        <div class="tab-pane fade <%= i === 0 ? 'show active' : '' %>" id="carta-<%= c.id %>" role="tabpanel" aria-labelledby="tab-carta-<%= c.id %>">
+          <% if (!c.categorias.length) { %>
+            <div class="text-center"><h4>No hay información para mostrar</h4></div>
+          <% } %>
+          <% c.categorias.forEach(function (k) { %>
+            <div class="section-intro mb-20px"><h4 class="intro-title"><%= k.nombre %></h4></div>
+            <div class="row">
+              <% if (!k.items.length) { %>
+                <div class="col-lg-12 text-center"><h4>No hay información para mostrar</h4></div>
+              <% } %>
+              <% k.items.forEach(function (it) { %>
+                <div class="<%= k.items.length > 1 ? 'col-lg-6' : 'col-lg-12' %>">
+                  <div class="media align-items-center food-card">
+                    <%- include('partials/foto', { foto: it.foto, clase: 'mr-3 mr-sm-4', ancho: 120, alto: null }) %>
+                    <div class="media-body">
+                      <div class="d-flex justify-content-between food-card-title">
+                        <h4><%= it.nombre %></h4>
+                        <h3 class="price-tag"><%= monedaChilena(it.precio) %></h3>
+                      </div>
+                      <p><%= it.descripcion %><br><%= it.observaciones %></p>
+                      <% if (it.tiempo) { %><p><%- include('partials/icono', { nombre: 'reloj' }) %> <%= it.tiempo %></p><% } %>
+                      <%- include('partials/estrellas', { puntuacion: it.puntuacion }) %>
+                      <a class="button float-right js-agregar" href="#" data-id="<%= it.id %>">Seleccionar</a>
+                    </div>
+                  </div>
+                </div>
+              <% }) %>
+            </div>
+          <% }) %>
+        </div>
+      <% }) %>
+    </div>
+  </div></div></div></div>
+</section>
+
+<div id="myModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="modalTitulo" aria-hidden="true">
+  <div class="modal-dialog" role="document"><div class="modal-content">
+    <div class="modal-header">
+      <h5 class="modal-title" id="modalTitulo">Selección de Producto</h5>
+      <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar"><span aria-hidden="true">&times;</span></button>
+    </div>
+    <div class="modal-body" id="modal-mensaje">El producto seleccionado ha sido agregado.</div>
+  </div></div>
+</div>
+
+<section id="comentarios">
+  <div class="container contendor"><div class="container"><div class="row"><div class="col-lg-12">
+    <div class="section-intro">
+      <h4 class="intro-title">Comentarios</h4>
+      <% if (usuario) { %>
+        <form action="/carta/<%= restaurante.id %>/comentarios" method="post">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="form-group">
+            <label>Nombre:</label>
+            <input type="text" class="form-control" value="<%= usuario.nombre %>" disabled>
+          </div>
+          <div class="form-group">
+            <label for="comentario">Comentario:</label>
+            <textarea class="form-control" rows="5" id="comentario" name="comentario" maxlength="1000" required></textarea>
+          </div>
+          <button type="submit" class="btn btn-success">Comentar</button>
+        </form>
+      <% } else { %>
+        <p>Inicia sesión para dejar un comentario.</p>
+      <% } %>
+    </div>
+    <br>
+    <% comentarios.forEach(function (c) { %>
+      <div class="card bg-light"><div class="card-body">
+        <b><%= c.usuario %></b><br><%= c.comentario %>
+      </div></div><br>
+    <% }) %>
+    <hr>
+  </div></div></div></div>
+</section>
+<%- include('partials/footer') %>

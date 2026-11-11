@@ -1,0 +1,41 @@
+# AMBIENTE 2: QA  (imágenes de producción, datos de demo, BD y backend NO expuestos)
+# Contenedores: frontend (Nginx) + backend (Node.js) + db (PostgreSQL)
+# Uso:
+#   cp docker/env/qa.env.example docker/env/qa.env   # y cambia secretos
+#   docker compose --env-file docker/env/qa.env -f docker/docker-compose.qa.yml up -d --build
+name: carta-qa
+services:
+  frontend:
+    build:
+      context: ../frontend
+    ports:
+      - "3001:8080"                  # http://localhost:3001
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+  backend:
+    build:
+      context: ../backend
+      target: prod
+    env_file: ./env/qa.env
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata-qa:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+volumes:
+  pgdata-qa:

@@ -1,0 +1,285 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Carta Digital PNK - infraestructura como código (3ra entrega).
+  RDS PostgreSQL + Application Load Balancer + Auto Scaling Group con el contenedor Docker de la app.
+  El DNS/HTTPS de cara al público lo gestiona Cloudflare (paso manual, ver docs).
+
+Parameters:
+  Ambiente:
+    Type: String
+    AllowedValues: [qa, prod]
+    Default: qa
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC donde se despliega (puede ser la VPC por defecto).
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Al menos 2 subredes en zonas de disponibilidad distintas.
+  BackendImageUri:
+    Type: String
+    Description: Imagen del BACKEND en ECR, p. ej. 123456789012.dkr.ecr.us-east-1.amazonaws.com/carta-digital-backend-qa:abc123
+  FrontendImageUri:
+    Type: String
+    Description: Imagen del FRONTEND (Nginx) en ECR, p. ej. 123456789012.dkr.ecr.us-east-1.amazonaws.com/carta-digital-frontend-qa:abc123
+  InstanceType:
+    Type: String
+    Default: t3.micro
+  DbInstanceClass:
+    Type: String
+    Default: db.t4g.micro
+  DbMultiAz:
+    Type: String
+    AllowedValues: ['true', 'false']
+    Default: 'false'
+  DbDeletionProtection:
+    Type: String
+    AllowedValues: ['true', 'false']
+    Default: 'false'
+  MinSize:
+    Type: Number
+    Default: 1
+  MaxSize:
+    Type: Number
+    Default: 3
+  CertificateArn:
+    Type: String
+    Default: ''
+    Description: >
+      (Opcional) ARN de un certificado ACM. Si se indica, el ALB escucha en 443 y redirige 80->443
+      (permite Cloudflare en modo "Full (strict)" y cookies Secure).
+  SeedDemo:
+    Type: String
+    AllowedValues: ['true', 'false']
+    Default: 'false'
+    Description: Cargar datos/usuarios de demo (solo QA).
+
+Conditions:
+  TieneCertificado: !Not [!Equals [!Ref CertificateArn, '']]
+  EsProd: !Equals [!Ref Ambiente, prod]
+
+Resources:
+  # ------------------------------------------------------------------ Seguridad de red
+  AlbSg:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Load Balancer - entrada HTTP/HTTPS
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - { IpProtocol: tcp, FromPort: 80, ToPort: 80, CidrIp: 0.0.0.0/0 }
+        - { IpProtocol: tcp, FromPort: 443, ToPort: 443, CidrIp: 0.0.0.0/0 }
+  AppSg:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Instancias (frontend Nginx) - solo aceptan trafico del Load Balancer
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - { IpProtocol: tcp, FromPort: 8080, ToPort: 8080, SourceSecurityGroupId: !Ref AlbSg }
+  DbSg:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: RDS - solo aceptan trafico de las instancias de la app
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - { IpProtocol: tcp, FromPort: 5432, ToPort: 5432, SourceSecurityGroupId: !Ref AppSg }
+
+  # ------------------------------------------------------------------ Secretos
+  SessionSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: Secreto de sesion de Express
+      GenerateSecretString:
+        PasswordLength: 64
+        ExcludePunctuation: true
+
+  # ------------------------------------------------------------------ Base de datos (RDS PostgreSQL)
+  DbSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subredes de la BD
+      SubnetIds: !Ref SubnetIds
+  Db:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Properties:
+      Engine: postgres
+      EngineVersion: '16'
+      DBInstanceClass: !Ref DbInstanceClass
+      AllocatedStorage: '20'
+      StorageType: gp3
+      StorageEncrypted: true
+      DBName: carta
+      MasterUsername: carta_admin
+      ManageMasterUserPassword: true          # la clave la genera y guarda Secrets Manager
+      MultiAZ: !Ref DbMultiAz
+      PubliclyAccessible: false
+      DeletionProtection: !Ref DbDeletionProtection
+      BackupRetentionPeriod: !If [EsProd, 7, 1]
+      DBSubnetGroupName: !Ref DbSubnetGroup
+      VPCSecurityGroups: [!Ref DbSg]
+
+  # ------------------------------------------------------------------ Permisos de las instancias
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - { Effect: Allow, Principal: { Service: ec2.amazonaws.com }, Action: 'sts:AssumeRole' }
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore            # acceso por SSM, sin SSH
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly      # descargar la imagen
+      Policies:
+        - PolicyName: LeerSecretos
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource:
+                  - !GetAtt Db.MasterUserSecret.SecretArn
+                  - !Ref SessionSecret
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles: [!Ref InstanceRole]
+
+  # ------------------------------------------------------------------ Launch Template + Auto Scaling
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateData:
+        ImageId: '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64}}'
+        InstanceType: !Ref InstanceType
+        IamInstanceProfile: { Arn: !GetAtt InstanceProfile.Arn }
+        SecurityGroupIds: [!Ref AppSg]
+        MetadataOptions: { HttpTokens: required }         # IMDSv2 obligatorio
+        BlockDeviceMappings:
+          - DeviceName: /dev/xvda
+            Ebs: { VolumeSize: 12, VolumeType: gp3, Encrypted: true }
+        UserData:
+          Fn::Base64: !Sub
+            - |
+              #!/bin/bash
+              set -euxo pipefail
+              dnf install -y docker jq
+              systemctl enable --now docker
+              REGION=${AWS::Region}
+              aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin ${Registro}
+              DBJSON=$(aws secretsmanager get-secret-value --region $REGION --secret-id ${DbSecretArn} --query SecretString --output text)
+              SESION=$(aws secretsmanager get-secret-value --region $REGION --secret-id ${SessionSecretArn} --query SecretString --output text)
+              docker pull ${BackendImageUri}
+              docker pull ${FrontendImageUri}
+              # Red interna: el frontend (Nginx) llega al backend por el nombre "backend".
+              docker network create carta
+              # BACKEND (Node.js): sin puertos publicados, solo visible dentro de la red "carta"
+              docker run -d --name backend --network carta --network-alias backend --restart always \
+                -e NODE_ENV=${NodeEnv} \
+                -e PORT=3000 \
+                -e DB_HOST=${DbHost} -e DB_PORT=5432 -e DB_NAME=carta \
+                -e DB_USER="$(echo "$DBJSON" | jq -r .username)" \
+                -e DB_PASSWORD="$(echo "$DBJSON" | jq -r .password)" \
+                -e DB_SSL=true \
+                -e SESSION_SECRET="$SESION" \
+                -e COOKIE_SECURE=${CookieSegura} \
+                -e TRUST_PROXY=3 \
+                -e RUN_MIGRATIONS=true \
+                -e SEED_DEMO=${SeedDemo} \
+                --read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges:true \
+                ${BackendImageUri}
+              # FRONTEND (Nginx): único contenedor expuesto, recibe el tráfico del Load Balancer
+              docker run -d --name frontend --network carta --restart always -p 8080:8080 \
+                --read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges:true \
+                ${FrontendImageUri}
+            - Registro: !Select [0, !Split ['/', !Ref BackendImageUri]]
+              DbSecretArn: !GetAtt Db.MasterUserSecret.SecretArn
+              SessionSecretArn: !Ref SessionSecret
+              DbHost: !GetAtt Db.Endpoint.Address
+              NodeEnv: !If [EsProd, production, qa]
+              CookieSegura: !If [TieneCertificado, 'true', 'false']
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MinInstancesInService: !Ref MinSize
+        MaxBatchSize: 1
+        PauseTime: PT5M
+        WaitOnResourceSignals: false
+    Properties:
+      MinSize: !Ref MinSize
+      MaxSize: !Ref MaxSize
+      VPCZoneIdentifier: !Ref SubnetIds
+      HealthCheckType: ELB
+      HealthCheckGracePeriod: 240
+      TargetGroupARNs: [!Ref TargetGroup]
+      LaunchTemplate:
+        LaunchTemplateId: !Ref LaunchTemplate
+        Version: !GetAtt LaunchTemplate.LatestVersionNumber
+      Tags:
+        - { Key: Name, Value: !Sub 'carta-digital-${Ambiente}', PropagateAtLaunch: true }
+  ScalingPolicyCpu:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: !Ref AutoScalingGroup
+      PolicyType: TargetTrackingScaling
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification: { PredefinedMetricType: ASGAverageCPUUtilization }
+        TargetValue: 60
+
+  # ------------------------------------------------------------------ Load Balancer
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Type: application
+      Scheme: internet-facing
+      SecurityGroups: [!Ref AlbSg]
+      Subnets: !Ref SubnetIds
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      VpcId: !Ref VpcId
+      Protocol: HTTP
+      Port: 8080
+      TargetType: instance
+      HealthCheckPath: /health
+      HealthCheckIntervalSeconds: 20
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      Matcher: { HttpCode: '200' }
+      TargetGroupAttributes:
+        - { Key: deregistration_delay.timeout_seconds, Value: '30' }
+  ListenerHttp:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - !If
+          - TieneCertificado
+          - Type: redirect
+            RedirectConfig: { Protocol: HTTPS, Port: '443', StatusCode: HTTP_301 }
+          - Type: forward
+            TargetGroupArn: !Ref TargetGroup
+  ListenerHttps:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Condition: TieneCertificado
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 443
+      Protocol: HTTPS
+      SslPolicy: ELBSecurityPolicy-TLS13-1-2-2021-06
+      Certificates:
+        - CertificateArn: !Ref CertificateArn
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+
+Outputs:
+  AlbDnsName:
+    Description: Destino del CNAME en Cloudflare
+    Value: !GetAtt LoadBalancer.DNSName
+  DbEndpoint:
+    Value: !GetAtt Db.Endpoint.Address
+  AutoScalingGroup:
+    Value: !Ref AutoScalingGroup

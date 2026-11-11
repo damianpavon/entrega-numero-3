@@ -1,0 +1,16 @@
+flowchart LR
+  U([Usuario]) -->|HTTPS| CF["Cloudflare<br/>DNS + HTTPS"]
+  CF --> ALB["Application<br/>Load Balancer"]
+  subgraph AWS
+    direction LR
+    ALB --> ASG
+    subgraph ASG["Auto Scaling Group"]
+      direction TB
+      A1["EC2<br/>Nginx (frontend) → Node.js (backend)"]
+      A2["EC2<br/>Nginx (frontend) → Node.js (backend)"]
+    end
+    ASG --> RDS[("RDS<br/>PostgreSQL")]
+    SM["Secrets Manager"] -.->|claves| ASG
+    ECR["ECR<br/>imagen Docker"] -.->|pull| ASG
+  end
+  GIT["Git<br/>rama nueva"] --> BUILD["deploy.sh<br/>build + push"] --> ECR
