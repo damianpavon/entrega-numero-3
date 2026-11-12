@@ -1,0 +1,9 @@
+node_modules/
+*.log
+.DS_Store
+# Secretos: solo se versionan los *.env.example
+docker/env/*.env
+!docker/env/*.env.example
+.env
+infra/aws/outputs.json
+coverage/

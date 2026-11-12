@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10303A">
+  <title>Carta Digital</title>
+  <link rel="icon" href="/img/Fevicon.png">
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <a class="saltar" href="#app">Saltar al contenido</a>
+
+  <header class="cabecera">
+    <div class="cabecera__interior">
+      <a class="marca" href="#/">Carta Digital</a>
+      <div id="zona-sesion" class="sesion"></div>
+    </div>
+  </header>
+
+  <main id="app" tabindex="-1">
+    <p class="cargando">Cargando…</p>
+  </main>
+
+  <footer class="pie">
+    PNK Security · Desarrollo Seguro · INACAP La Serena
+  </footer>
+
+  <div id="barra-pedido" class="barra-pedido" hidden>
+    <a class="barra-pedido__enlace" href="#/">
+      <span class="barra-pedido__titulo">Mi pedido</span>
+      <span class="barra-pedido__cuenta" id="barra-cuenta">0</span>
+      <span class="barra-pedido__accion">Ver pedido</span>
+    </a>
+  </div>
+
+  <div id="aviso" class="aviso" role="status" aria-live="polite"></div>
+
+  <dialog id="dlg-login" class="dialogo" aria-labelledby="dlg-titulo">
+    <form method="dialog" id="form-login" novalidate>
+      <h2 id="dlg-titulo">Ingresar</h2>
+      <label for="login-email">Correo</label>
+      <input id="login-email" name="email" type="email" autocomplete="username" required maxlength="255">
+      <label for="login-clave">Contraseña</label>
+      <input id="login-clave" name="password" type="password" autocomplete="current-password" required maxlength="200">
+      <p id="login-error" class="error" role="alert" hidden></p>
+      <div class="dialogo__acciones">
+        <button type="button" class="btn btn--linea" id="login-cancelar">Cancelar</button>
+        <button type="submit" class="btn" id="login-enviar">Ingresar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

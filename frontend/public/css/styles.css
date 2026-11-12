@@ -1,0 +1,203 @@
+/* Carta Digital — estilos.
+   Idea: una carta de restaurante impresa llevada a la pantalla. Nombre y precio unidos por
+   una línea de puntos (el "relleno" clásico de los menús), títulos en serif, y una sola
+   pieza de color vivo: el limón de pica, reservado para lo que cambia (pedido, pestaña activa). */
+
+:root {
+  --tinta: #10303a;       /* texto y barras */
+  --sal: #f6f9f8;         /* fondo de página (blanco frío, no crema) */
+  --papel: #ffffff;
+  --linea: #c9d9d6;
+  --suave: #4e6872;       /* texto secundario (contraste 5.4:1 sobre --sal) */
+  --limon: #dfe65a;       /* acento: solo sobre --tinta o como subrayado */
+  --aji: #a8231c;         /* errores */
+  --radio: 10px;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: 4.5rem; }
+body {
+  margin: 0; background: var(--sal); color: var(--tinta);
+  font: 400 1rem/1.55 var(--sans);
+  min-height: 100vh; display: flex; flex-direction: column;
+}
+main { flex: 1; padding: 1.5rem 1rem 6rem; }
+main:focus { outline: none; }
+img { max-width: 100%; display: block; }
+a { color: inherit; text-underline-offset: 0.18em; }
+h1, h2, h3, h4, p { margin: 0; }
+
+:focus-visible { outline: 3px solid var(--tinta); outline-offset: 2px; border-radius: 4px; }
+.cabecera :focus-visible, .barra-pedido :focus-visible { outline-color: var(--limon); }
+
+.saltar {
+  position: absolute; left: 0.5rem; top: -4rem; z-index: 30;
+  background: var(--papel); padding: 0.6rem 1rem; border-radius: var(--radio);
+}
+.saltar:focus { top: 0.5rem; }
+
+/* ---------- Cabecera ---------- */
+.cabecera { background: var(--tinta); color: var(--sal); position: sticky; top: 0; z-index: 20; }
+.cabecera__interior {
+  max-width: 44rem; margin: 0 auto; padding: 0.7rem 1rem;
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+}
+.marca { font: 600 1.2rem/1 var(--serif); letter-spacing: 0.01em; text-decoration: none; }
+.sesion { display: flex; align-items: center; gap: 0.9rem; font-size: 0.9rem; }
+.sesion__nombre { max-width: 11rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.enlace {
+  background: none; border: 0; padding: 0.25rem 0; font: inherit; color: inherit;
+  text-decoration: underline; cursor: pointer;
+}
+.enlace--claro { color: var(--sal); }
+
+/* ---------- Estructura ---------- */
+.columna { max-width: 44rem; margin: 0 auto; }
+.titulo { font: 600 clamp(1.9rem, 6vw, 2.6rem)/1.1 var(--serif); letter-spacing: -0.01em; }
+.bajada { color: var(--suave); margin: 0.5rem 0 1.25rem; }
+.seccion { font: 600 1.35rem/1.2 var(--serif); margin: 2.25rem 0 0.9rem; }
+.vacio { color: var(--suave); padding: 0.5rem 0; }
+.vacio-grande { text-align: center; padding: 3rem 0; display: grid; gap: 1rem; justify-items: center; }
+.cargando { text-align: center; color: var(--suave); padding: 3rem 0; }
+.volver { display: inline-block; margin-bottom: 1rem; color: var(--suave); font-size: 0.92rem; }
+.precio { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+
+/* Línea de puntos entre nombre y precio */
+.puntos { flex: 1; min-width: 1rem; border-bottom: 2px dotted var(--linea); transform: translateY(-0.28em); }
+
+/* ---------- Botones ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
+  min-height: 2.75rem; padding: 0.55rem 1.25rem;
+  background: var(--tinta); color: var(--sal); border: 2px solid var(--tinta); border-radius: var(--radio);
+  font: 600 0.95rem/1 var(--sans); text-decoration: none; cursor: pointer;
+}
+.btn:hover { background: #0a2128; }
+.btn:disabled { opacity: 0.55; cursor: progress; }
+.btn--linea { background: transparent; color: var(--tinta); }
+.btn--linea:hover { background: var(--tinta); color: var(--sal); }
+.btn--texto { background: none; border-color: transparent; color: var(--aji); min-height: 2.5rem; padding: 0.4rem 0.6rem; }
+.btn--texto:hover { background: none; text-decoration: underline; }
+
+/* ---------- Índice de restaurantes ---------- */
+.indice { list-style: none; margin: 0; padding: 0; }
+.indice__fila {
+  display: flex; align-items: baseline; gap: 0.6rem; padding: 1.05rem 0;
+  text-decoration: none; border-bottom: 1px solid var(--linea);
+}
+.indice__nombre { font: 600 1.3rem/1.2 var(--serif); }
+.indice__lugar { color: var(--suave); font-size: 0.92rem; }
+.indice__fila:hover .indice__nombre { text-decoration: underline; text-underline-offset: 0.2em; }
+
+/* ---------- Cabecera del restaurante ---------- */
+.restaurante { display: flex; gap: 1rem; align-items: center; margin-bottom: 0.5rem; }
+.restaurante__foto { width: 5.5rem; height: 5.5rem; object-fit: cover; border-radius: var(--radio); flex: none; background: var(--linea); }
+.restaurante__dato { color: var(--suave); font-size: 0.95rem; margin-top: 0.25rem; }
+.restaurante__dato a { text-underline-offset: 0.2em; }
+
+/* ---------- Destacados ---------- */
+.destacados__tira {
+  display: flex; gap: 0.9rem; overflow-x: auto; padding: 0.25rem 1rem 0.9rem;
+  margin: 0 -1rem; scroll-snap-type: x proximity; scroll-padding: 0 1rem;
+}
+.tile { flex: none; width: 15rem; scroll-snap-align: start; background: var(--papel); border-radius: var(--radio); overflow: hidden; border: 1px solid var(--linea); }
+.tile__foto { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: var(--linea); }
+.tile__cuerpo { padding: 0.8rem 0.9rem 1rem; display: grid; gap: 0.35rem; justify-items: start; }
+.tile__nombre { font: 600 1.1rem/1.25 var(--serif); }
+.tile .btn { margin-top: 0.4rem; }
+
+/* ---------- Pestañas ---------- */
+.pestanas {
+  display: flex; gap: 1.4rem; overflow-x: auto; margin: 2rem -1rem 0; padding: 0 1rem;
+  border-bottom: 1px solid var(--linea); position: sticky; top: 3.2rem; z-index: 10; background: var(--sal);
+}
+.pestana {
+  flex: none; background: none; border: 0; border-bottom: 4px solid transparent; margin-bottom: -1px;
+  padding: 0.9rem 0.1rem 0.7rem; font: 600 1rem/1 var(--sans); color: var(--suave); cursor: pointer;
+}
+.pestana[aria-selected="true"] { color: var(--tinta); border-bottom-color: var(--limon); box-shadow: inset 0 -1px 0 var(--tinta); }
+.pestana:hover { color: var(--tinta); }
+.panel { padding-top: 0.5rem; }
+.panel:focus-visible { outline-offset: -2px; }
+
+/* ---------- Productos ---------- */
+.categoria__nombre { font: 600 1.5rem/1.2 var(--serif); margin: 1.9rem 0 0.4rem; }
+.item { display: flex; gap: 1rem; justify-content: space-between; padding: 1.15rem 0; border-bottom: 1px solid var(--linea); }
+.item__texto { flex: 1; min-width: 0; display: grid; gap: 0.4rem; justify-items: start; align-content: start; }
+.item__linea { display: flex; align-items: baseline; gap: 0.6rem; width: 100%; }
+.item__nombre { font: 600 1.15rem/1.25 var(--serif); }
+.item__detalle { color: var(--suave); font-size: 0.95rem; max-width: 34rem; }
+.item__meta { display: flex; align-items: center; gap: 1rem; color: var(--suave); font-size: 0.88rem; flex-wrap: wrap; }
+.item .btn { margin-top: 0.3rem; min-height: 2.5rem; padding: 0.4rem 1rem; }
+.item__foto { width: 6.5rem; height: 6.5rem; object-fit: cover; border-radius: var(--radio); flex: none; background: var(--linea); }
+
+.estrellas { display: inline-flex; gap: 3px; }
+.punto { width: 0.55rem; height: 0.55rem; border-radius: 50%; border: 1.5px solid var(--suave); }
+.punto--lleno { background: var(--tinta); border-color: var(--tinta); }
+
+/* ---------- Pedido ---------- */
+.pedido { list-style: none; margin: 0; padding: 0; }
+.pedido__fila { display: flex; align-items: baseline; gap: 0.6rem; padding: 0.9rem 0; border-bottom: 1px solid var(--linea); }
+.pedido__nombre { font: 600 1.1rem/1.25 var(--serif); }
+.pedido__fila .btn--texto { align-self: center; margin-left: 0.3rem; }
+.total { display: flex; justify-content: space-between; align-items: baseline; font: 600 1.5rem/1 var(--serif); padding: 1.4rem 0 0.4rem; }
+.total .precio { font-family: var(--serif); }
+.aviso-pedido { background: #fff6d6; border-radius: var(--radio); padding: 0.7rem 0.9rem; margin-bottom: 1rem; font-size: 0.93rem; }
+
+/* ---------- Comentarios ---------- */
+.comentarios__form { display: grid; gap: 0.6rem; justify-items: start; margin-bottom: 1.5rem; }
+.comentarios__ingreso { color: var(--suave); margin-bottom: 1.5rem; }
+label { font-weight: 600; font-size: 0.92rem; }
+input, textarea {
+  width: 100%; font: inherit; color: inherit; background: var(--papel);
+  border: 1.5px solid var(--suave); border-radius: var(--radio); padding: 0.65rem 0.8rem;
+}
+textarea { resize: vertical; min-height: 6rem; }
+.comentario { padding: 0.9rem 0; border-bottom: 1px solid var(--linea); }
+.comentario__cabecera { display: flex; justify-content: space-between; gap: 1rem; font-size: 0.92rem; }
+.comentario__cabecera time { color: var(--suave); }
+.comentario__texto { margin-top: 0.3rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.error { color: var(--aji); font-weight: 600; font-size: 0.93rem; }
+
+/* ---------- Diálogo de ingreso ---------- */
+.dialogo { border: 0; border-radius: 14px; padding: 1.5rem; width: min(24rem, calc(100vw - 2rem)); background: var(--papel); color: var(--tinta); }
+.dialogo::backdrop { background: rgba(16, 48, 58, 0.55); }
+.dialogo form { display: grid; gap: 0.5rem; }
+.dialogo h2 { font: 600 1.5rem/1.2 var(--serif); margin-bottom: 0.5rem; }
+.dialogo__acciones { display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 0.8rem; }
+
+/* ---------- Barra del pedido (lo único con color vivo) ---------- */
+.barra-pedido { position: fixed; left: 0; right: 0; bottom: 0; z-index: 25; background: var(--tinta); color: var(--sal); padding-bottom: env(safe-area-inset-bottom); }
+.barra-pedido[hidden] { display: none; }
+.barra-pedido__enlace { max-width: 44rem; margin: 0 auto; padding: 0.85rem 1rem; display: flex; align-items: center; gap: 0.7rem; text-decoration: none; }
+.barra-pedido__titulo { font: 600 1.05rem/1 var(--serif); }
+.barra-pedido__cuenta {
+  min-width: 1.7rem; height: 1.7rem; padding: 0 0.4rem; border-radius: 999px; background: var(--limon); color: var(--tinta);
+  display: inline-grid; place-items: center; font-weight: 700; font-size: 0.9rem; font-variant-numeric: tabular-nums;
+}
+.barra-pedido__accion { margin-left: auto; font-weight: 600; text-decoration: underline; text-underline-offset: 0.2em; }
+.barra-pedido--salto .barra-pedido__cuenta { animation: salto 0.35s ease-out; }
+@keyframes salto { 40% { transform: scale(1.35); } 100% { transform: scale(1); } }
+
+/* ---------- Aviso (toast) ---------- */
+.aviso { position: fixed; left: 0; right: 0; bottom: 4.6rem; z-index: 40; display: flex; justify-content: center; pointer-events: none; padding: 0 1rem; }
+.aviso__texto { background: var(--papel); color: var(--tinta); border: 1.5px solid var(--tinta); border-radius: var(--radio); padding: 0.6rem 1rem; font-weight: 600; font-size: 0.93rem; opacity: 0; transform: translateY(0.5rem); transition: opacity 0.2s, transform 0.2s; }
+.aviso--visible .aviso__texto { opacity: 1; transform: none; }
+
+.pie { text-align: center; color: var(--suave); font-size: 0.82rem; padding: 1rem 1rem 5.5rem; border-top: 1px solid var(--linea); }
+
+/* ---------- Pantallas anchas ---------- */
+@media (min-width: 40rem) {
+  main { padding-top: 2.25rem; }
+  .item__foto { width: 8rem; height: 8rem; }
+  .restaurante__foto { width: 6.5rem; height: 6.5rem; }
+  .destacados__tira { margin: 0; padding-left: 0; padding-right: 0; }
+  .pestanas { margin-left: 0; margin-right: 0; padding-left: 0; padding-right: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}

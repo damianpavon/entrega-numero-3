@@ -1,0 +1,9 @@
+flowchart TB
+  U([Usuario]) -->|HTTPS| CF[Cloudflare<br/>DNS + HTTPS]
+  CF -->|HTTP/HTTPS| ALB[AWS Load Balancer]
+  subgraph ASG[Auto Scaling Group - instancias EC2]
+    direction LR
+    FE[Contenedor FRONTEND<br/>Nginx :8080<br/>SPA estática] -->|/api/| BE[Contenedor BACKEND<br/>Node.js + Express :3000<br/>API REST]
+  end
+  ALB --> FE
+  BE -->|SQL parametrizado + sesiones| DB[(RDS PostgreSQL 16)]
